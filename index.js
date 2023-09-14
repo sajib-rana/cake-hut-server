@@ -51,6 +51,7 @@ async function run() {
     const usersCollection = client.db("CakeDb").collection("users");
     const reviewCollection = client.db("CakeDb").collection("reviews");
     const cartCollection = client.db("CakeDb").collection("carts");
+    const paymentCollection = client.db("CakeDb").collection("payments");
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -74,7 +75,7 @@ async function run() {
       next();
     };
 
-    app.get("/users", verifyJWT,verifyAdmin, async (req, res) => {
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
@@ -175,6 +176,21 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await cartCollection.deleteOne(query);
       res.send(result);
+    });
+
+    // create payment intent
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
     });
 
     // Send a ping to confirm a successful connection
